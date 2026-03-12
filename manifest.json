@@ -1,0 +1,22 @@
+{
+  "name": "제이투엔텍 견적 시스템",
+  "short_name": "J2N 견적",
+  "description": "제이투엔텍 블럭 견적 시스템",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#ffc107",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

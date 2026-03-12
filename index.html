@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="J2N 견적">
+    <meta name="theme-color" content="#ffc107">
+    <link rel="manifest" href="manifest.json">
+    <title>제이투엔텍 블럭 견적</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Pretendard', 'Malgun Gothic', sans-serif; background: #121212; color: #fff; margin: 0; padding: 0 0 140px 0; line-height: 1.5; }
+
+        /* 상단 헤더 */
+        .app-header { background: #1e1e1e; border-bottom: 3px solid #ffc107; padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+        .app-header h1 { font-size: 17px; font-weight: 900; color: #fff; margin: 0; letter-spacing: -0.5px; }
+        .app-header span { font-size: 12px; color: #ffc107; font-weight: 700; }
+
+        /* 수량 박스 */
+        .qty-section { background: #1e1e1e; margin: 12px; border-radius: 12px; padding: 16px 18px; border: 2px solid #ffc107; }
+        .qty-row { display: flex; align-items: center; gap: 12px; }
+        .qty-label { font-size: 15px; font-weight: 800; color: #ffc107; flex: 1; }
+        .qty-input-wrap { display: flex; align-items: center; gap: 8px; }
+        .qty-btn { width: 38px; height: 38px; background: #333; border: none; color: #fff; font-size: 22px; border-radius: 8px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+        .qty-btn:active { background: #ffc107; color: #000; }
+        #qty { width: 64px; height: 38px; background: #2d2d2d; border: 2px solid #555; color: #fff; text-align: center; font-size: 18px; font-weight: 800; border-radius: 8px; }
+        .discount-tag { background: #ffc107; color: #000; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 20px; margin-top: 8px; display: inline-block; }
+        .discount-tag.none { background: #333; color: #777; }
+
+        /* 섹션 카드 */
+        .card { background: #1e1e1e; margin: 10px 12px; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a2a; }
+        .card-header { background: #ffc107; padding: 10px 16px; font-size: 14px; font-weight: 900; color: #000; }
+        .card-sub { font-size: 13px; color: #ffc107; font-weight: 700; padding: 12px 16px 4px; display: flex; align-items: center; gap: 6px; }
+        .card-sub::before { content: '■'; font-size: 9px; }
+
+        /* 입력 행 */
+        .row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid #2a2a2a; gap: 10px; }
+        .row:last-child { border-bottom: none; }
+        .row-label { flex: 1.1; font-size: 13px; color: #ccc; font-weight: 500; line-height: 1.3; }
+        .row-input { flex: 1; }
+        .row-price { font-size: 13px; color: #ffc107; font-weight: 700; text-align: right; min-width: 72px; white-space: nowrap; }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        input[type="number"] { -moz-appearance: textfield; width: 100%; padding: 9px 10px; background: #2d2d2d; border: 1.5px solid #444; color: #fff; border-radius: 8px; font-size: 14px; font-weight: 600; text-align: right; }
+        input[type="number"]:focus { outline: none; border-color: #ffc107; }
+        select { width: 100%; padding: 9px 10px; background: #2d2d2d; border: 1.5px solid #444; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; }
+        select:focus { outline: none; border-color: #ffc107; }
+
+        /* 치수 입력 (3칸) */
+        .dim-inputs { display: flex; gap: 6px; flex: 1.8; }
+        .dim-inputs input { padding: 9px 6px; font-size: 13px; }
+
+        /* ISO 그리드 */
+        .iso-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        .iso-item { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #2a2a2a; gap: 8px; }
+        .iso-item:nth-child(odd) { border-right: 1px solid #2a2a2a; }
+        .iso-label { font-size: 13px; color: #ccc; font-weight: 700; min-width: 48px; }
+        .iso-input { flex: 1; }
+        .iso-price { font-size: 11px; color: #ffc107; font-weight: 700; min-width: 52px; text-align: right; white-space: nowrap; }
+
+        /* 특수항목 */
+        .spec-row { display: flex; gap: 8px; padding: 8px 16px; align-items: center; border-bottom: 1px solid #2a2a2a; }
+        .btn-add { background: #ffc107; color: #000; border: none; margin: 10px 16px; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 900; cursor: pointer; }
+        .btn-del { background: #333; color: #ff5555; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; }
+
+        /* 하단 고정 가격 바 */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-top: 2px solid #ffc107; padding: 12px 16px; z-index: 200; }
+        .bottom-detail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 10px; }
+        .b-item { text-align: center; }
+        .b-item-label { font-size: 10px; color: #777; }
+        .b-item-val { font-size: 12px; color: #ddd; font-weight: 700; }
+        .bottom-total { display: flex; align-items: center; justify-content: space-between; background: #ffc107; border-radius: 10px; padding: 12px 18px; }
+        .bottom-total-label { font-size: 14px; font-weight: 800; color: #000; }
+        .bottom-total-price { font-size: 26px; font-weight: 900; color: #000; }
+
+        /* 결과 보기 토글 버튼 */
+        .toggle-detail { width: 100%; background: none; border: none; color: #ffc107; font-size: 12px; font-weight: 700; padding: 4px; cursor: pointer; margin-bottom: 4px; }
+
+        /* PDF 전용 */
+        #pdf-content { display: none; }
+        .pdf-wrap { padding: 20px; background: #fff; color: #000; font-size: 13px; font-family: 'Malgun Gothic', sans-serif; }
+        .pdf-title { font-size: 22px; font-weight: 900; border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 16px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+        .pdf-table th { background: #ffc107; color: #000; padding: 8px 10px; font-weight: 800; text-align: left; border: 1px solid #ddd; }
+        .pdf-table td { padding: 7px 10px; border: 1px solid #ddd; color: #222; }
+        .pdf-table tr:nth-child(even) td { background: #f9f9f9; }
+        .pdf-total { background: #ffc107; padding: 16px 20px; border-radius: 8px; text-align: right; font-size: 20px; font-weight: 900; color: #000; margin-top: 12px; }
+        .pdf-discount-note { font-size: 12px; color: #888; margin-top: 6px; text-align: right; }
+
+        .btn-pdf { background: #d32f2f; color: #fff; border: none; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
+
+        /* 비밀번호 잠금 화면 */
+        #lockScreen { position: fixed; inset: 0; background: #121212; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+        .lock-logo { font-size: 48px; }
+        .lock-title { font-size: 20px; font-weight: 900; color: #fff; margin: 0; }
+        .lock-sub { font-size: 13px; color: #777; margin: 0; }
+        .lock-dots { display: flex; gap: 14px; margin: 8px 0; }
+        .lock-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ffc107; background: transparent; transition: background 0.15s; }
+        .lock-dot.filled { background: #ffc107; }
+        .lock-error { color: #ff5555; font-size: 13px; font-weight: 700; height: 18px; text-align: center; }
+        .lock-keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
+        .lock-key { height: 72px; background: #1e1e1e; border: 1.5px solid #333; border-radius: 14px; color: #fff; font-size: 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; user-select: none; }
+        .lock-key:active { background: #ffc107; color: #000; }
+        .lock-key.del { font-size: 20px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<!-- 비밀번호 잠금 화면 -->
+<div id="lockScreen">
+    <div class="lock-logo">🔐</div>
+    <div class="lock-title">제이투엔텍 견적 시스템</div>
+    <div class="lock-sub">비밀번호 4자리를 입력하세요</div>
+    <div class="lock-dots">
+        <div class="lock-dot" id="d0"></div>
+        <div class="lock-dot" id="d1"></div>
+        <div class="lock-dot" id="d2"></div>
+        <div class="lock-dot" id="d3"></div>
+    </div>
+    <div class="lock-error" id="lockError"></div>
+    <div class="lock-keypad">
+        <div class="lock-key" onclick="lockInput('1')">1</div>
+        <div class="lock-key" onclick="lockInput('2')">2</div>
+        <div class="lock-key" onclick="lockInput('3')">3</div>
+        <div class="lock-key" onclick="lockInput('4')">4</div>
+        <div class="lock-key" onclick="lockInput('5')">5</div>
+        <div class="lock-key" onclick="lockInput('6')">6</div>
+        <div class="lock-key" onclick="lockInput('7')">7</div>
+        <div class="lock-key" onclick="lockInput('8')">8</div>
+        <div class="lock-key" onclick="lockInput('9')">9</div>
+        <div class="lock-key del" onclick="lockDel()">⌫</div>
+        <div class="lock-key" onclick="lockInput('0')">0</div>
+        <div class="lock-key" style="background:transparent; border-color:transparent;"></div>
+    </div>
+</div>
+
+
+<div class="app-header">
+    <h1>🔧 제이투엔텍 블럭 견적</h1>
+    <span id="headerDiscount">할인없음</span>
+</div>
+
+<!-- 수량 -->
+<div class="qty-section">
+    <div class="qty-row">
+        <div class="qty-label">주문 수량 (Qty)</div>
+        <div class="qty-input-wrap">
+            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <input type="number" id="qty" value="1" min="1" oninput="calc()">
+            <button class="qty-btn" onclick="changeQty(1)">+</button>
+        </div>
+    </div>
+    <span id="discountBadge" class="discount-tag none">할인 없음</span>
+</div>
+
+<!-- 1. 소재 -->
+<div class="card">
+    <div class="card-header">1. 소재</div>
+    <div class="row">
+        <div class="row-label">소재 종류</div>
+        <div class="row-input"><select id="matType" onchange="updateSurfaceOptions(); calc();"><option value="AL">AL (알루미늄)</option><option value="FCD">FCD (주물)</option><option value="SS400">SS400 (강판)</option></select></div>
+        <div class="row-price"></div>
+    </div>
+    <div class="row">
+        <div class="row-label">T × W × L (mm)</div>
+        <div class="dim-inputs">
+            <input type="number" id="dimW" oninput="calc()" placeholder="T" min="0">
+            <input type="number" id="dimD" oninput="calc()" placeholder="W" min="0">
+            <input type="number" id="dimH" oninput="calc()" placeholder="L" min="0">
+        </div>
+        <div class="row-price"><span id="lineMat">0</span>원</div>
+    </div>
+</div>
+
+<!-- 2. 세팅 -->
+<div class="card">
+    <div class="card-header">2. 세팅</div>
+    <div class="row">
+        <div class="row-label">프로그래밍 (분)</div>
+        <div class="row-input"><input type="number" id="prog" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="lineProg">0</span>원</div>
+    </div>
+    <div class="row">
+        <div class="row-label">툴 세팅 (분)</div>
+        <div class="row-input"><input type="number" id="tool" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="lineTool">0</span>원</div>
+    </div>
+</div>
+
+<!-- 3. 가공 -->
+<div class="card">
+    <div class="card-header">3. 가공</div>
+    <div class="card-sub">포트 가공</div>
+    <div class="row">
+        <div class="row-label">소형 (G1/8~G3/8)</div>
+        <div class="row-input"><input type="number" id="pS" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="linePS">0</span>원</div>
+    </div>
+    <div class="row">
+        <div class="row-label">중형 (G1/2~G3/4)</div>
+        <div class="row-input"><input type="number" id="pM" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="linePM">0</span>원</div>
+    </div>
+    <div class="row">
+        <div class="row-label">대형 (G1 이상)</div>
+        <div class="row-input"><input type="number" id="pL" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="linePL">0</span>원</div>
+    </div>
+    <div class="card-sub">캐비티 가공</div>
+    <div class="row">
+        <div class="row-label">소형 (ø15 이하)</div>
+        <div class="row-input"><input type="number" id="cS" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="lineCS">0</span>원</div>
+    </div>
+    <div class="row">
+        <div class="row-label">중형 (ø24 이하)</div>
+        <div class="row-input"><input type="number" id="cM" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="lineCM">0</span>원</div>
+    </div>
+    <div class="row">
+        <div class="row-label">대형 (ø25 이상)</div>
+        <div class="row-input"><input type="number" id="cL" oninput="calc()" min="0"></div>
+        <div class="row-price"><span id="lineCL">0</span>원</div>
+    </div>
+    <div id="specCavContainer"></div>
+    <button class="btn-add" onclick="addSpecCav()">+ 특수 항목 추가</button>
+    <div class="card-sub" style="margin-top:4px;">취부 가공 (ISO 패드)</div>
+    <div class="iso-grid">
+        <div class="iso-item"><div class="iso-label">ISO 01</div><div class="iso-input"><input type="number" id="iso01" oninput="calc()" min="0"></div><div class="iso-price"><span id="lineISO01">0</span>원</div></div>
+        <div class="iso-item"><div class="iso-label">ISO 03</div><div class="iso-input"><input type="number" id="iso03" oninput="calc()" min="0"></div><div class="iso-price"><span id="lineISO03">0</span>원</div></div>
+        <div class="iso-item"><div class="iso-label">ISO 04</div><div class="iso-input"><input type="number" id="iso04" oninput="calc()" min="0"></div><div class="iso-price"><span id="lineISO04">0</span>원</div></div>
+        <div class="iso-item"><div class="iso-label">ISO 06</div><div class="iso-input"><input type="number" id="iso06" oninput="calc()" min="0"></div><div class="iso-price"><span id="lineISO06">0</span>원</div></div>
+        <div class="iso-item" style="grid-column: span 2;"><div class="iso-label">ISO 10</div><div class="iso-input"><input type="number" id="iso10" oninput="calc()" min="0"></div><div class="iso-price"><span id="lineISO10">0</span>원</div></div>
+    </div>
+</div>
+
+<!-- 4. 연마/기타가공 -->
+<div class="card">
+    <div class="card-header">4. 연마 / 기타가공</div>
+    <div class="row">
+        <div class="row-label">연마비</div>
+        <div class="row-input"><input type="number" id="grind" oninput="calc()" min="0"></div>
+        <div class="row-price"></div>
+    </div>
+    <div class="row">
+        <div class="row-label">기타 가공비</div>
+        <div class="row-input"><input type="number" id="special" oninput="calc()" min="0"></div>
+        <div class="row-price"></div>
+    </div>
+</div>
+
+<!-- 5. 표면처리 -->
+<div class="card">
+    <div class="card-header">5. 표면처리</div>
+    <div class="row">
+        <div class="row-label">처리 방식</div>
+        <div class="row-input"><select id="surfaceType" onchange="calc()"></select></div>
+        <div class="row-price"><span id="lineSurface">0</span>원</div>
+    </div>
+</div>
+
+<!-- 6. 버제거 -->
+<div class="card">
+    <div class="card-header">6. 버제거</div>
+    <div class="row">
+        <div class="row-label">난이도</div>
+        <div class="row-input"><select id="deburrLevel" onchange="calc()"><option value="1000">1단계</option><option value="3000">2단계</option><option value="6000">3단계</option><option value="10000">4단계</option><option value="15000">5단계</option></select></div>
+        <div class="row-price"><span id="lineDeburr">1,000</span>원</div>
+    </div>
+</div>
+
+<div style="margin: 10px 12px;">
+    <button class="btn-pdf" onclick="savePDF()">📄 PDF 견적서 저장</button>
+</div>
+
+<!-- 하단 고정 바 -->
+<div class="bottom-bar">
+    <button class="toggle-detail" onclick="toggleDetail()">▲ 항목별 내역 보기</button>
+    <div id="detailPanel" style="display:none; margin-bottom:8px;">
+        <div class="bottom-detail">
+            <div class="b-item"><div class="b-item-label">소재비</div><div class="b-item-val"><span id="outMat">0</span>원</div></div>
+            <div class="b-item"><div class="b-item-label">세팅+가공</div><div class="b-item-val"><span id="outSetupMach">0</span>원</div></div>
+            <div class="b-item"><div class="b-item-label">연마/기타</div><div class="b-item-val"><span id="outAddStep">0</span>원</div></div>
+        </div>
+        <div class="bottom-detail">
+            <div class="b-item"><div class="b-item-label">표면처리</div><div class="b-item-val"><span id="outSurface">0</span>원</div></div>
+            <div class="b-item"><div class="b-item-label">버제거</div><div class="b-item-val"><span id="outDeburr">1,000</span>원</div></div>
+            <div class="b-item"><div class="b-item-label">무게</div><div class="b-item-val"><span id="outWeight">0</span>kg</div></div>
+        </div>
+    </div>
+    <div class="bottom-total">
+        <div class="bottom-total-label">개당 납품 단가</div>
+        <div class="bottom-total-price" id="finalUnitPrice">0원</div>
+    </div>
+</div>
+
+<!-- PDF 전용 -->
+<div id="pdf-content">
+    <div class="pdf-wrap">
+        <div class="pdf-title">제이투엔텍 블럭 견적서</div>
+        <div style="font-size:13px; color:#555; margin-bottom:20px;" id="pdf-meta"></div>
+        <table class="pdf-table">
+            <thead><tr><th>항목</th><th>상세</th><th>금액 (원)</th></tr></thead>
+            <tbody id="pdf-tbody"></tbody>
+        </table>
+        <div class="pdf-discount-note" id="pdf-discount-note"></div>
+        <div class="pdf-total" id="pdf-total-line"></div>
+    </div>
+</div>
+
+<script>
+
+// 비밀번호 잠금
+const PASS = '6159';
+let lockBuf = '';
+function lockInput(n) {
+    if (lockBuf.length >= 4) return;
+    lockBuf += n;
+    document.getElementById('d' + (lockBuf.length - 1)).classList.add('filled');
+    document.getElementById('lockError').textContent = '';
+    if (lockBuf.length === 4) {
+        setTimeout(() => {
+            if (lockBuf === PASS) {
+                document.getElementById('lockScreen').style.display = 'none';
+            } else {
+                document.getElementById('lockError').textContent = '비밀번호가 틀렸습니다';
+                lockBuf = '';
+                for (let i = 0; i < 4; i++) document.getElementById('d' + i).classList.remove('filled');
+            }
+        }, 200);
+    }
+}
+function lockDel() {
+    if (lockBuf.length === 0) return;
+    lockBuf = lockBuf.slice(0, -1);
+    document.getElementById('d' + lockBuf.length).classList.remove('filled');
+    document.getElementById('lockError').textContent = '';
+}
+
+// PWA 서비스워커 등록
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+}
+
+function changeQty(delta) {
+    const el = document.getElementById('qty');
+    const v = Math.max(1, (parseInt(el.value) || 1) + delta);
+    el.value = v;
+    calc();
+}
+
+function toggleDetail() {
+    const p = document.getElementById('detailPanel');
+    const btn = document.querySelector('.toggle-detail');
+    if (p.style.display === 'none') { p.style.display = 'block'; btn.textContent = '▼ 항목별 내역 닫기'; }
+    else { p.style.display = 'none'; btn.textContent = '▲ 항목별 내역 보기'; }
+}
+
+function roundTo100(val) { return Math.round(val / 100) * 100; }
+function absVal(v) { return Math.max(0, v); }
+
+function addSpecCav() {
+    const container = document.getElementById('specCavContainer');
+    const div = document.createElement('div');
+    div.className = 'spec-row';
+    div.innerHTML = `<input type="number" class="spec-qty" placeholder="수량" oninput="calc()" min="0" style="flex:1; padding:9px; background:#2d2d2d; border:1.5px solid #444; color:#fff; border-radius:8px; font-size:14px;"><input type="number" class="spec-price" placeholder="단가" oninput="calc()" min="0" style="flex:1.5; padding:9px; background:#2d2d2d; border:1.5px solid #444; color:#fff; border-radius:8px; font-size:14px;"><button class="btn-del" onclick="this.parentElement.remove(); calc();">✕</button>`;
+    container.appendChild(div);
+}
+
+function updateSurfaceOptions() {
+    const mat = document.getElementById('matType').value;
+    const surf = document.getElementById('surfaceType');
+    surf.innerHTML = '<option value="0">없음</option>';
+    if (mat === 'AL') { surf.innerHTML += '<option value="2500">백색 아노다이징</option><option value="4500">칼라 아노다이징</option>'; }
+    else { surf.innerHTML += '<option value="1200">표면처리 적용</option>'; }
+}
+
+function calc() {
+    const getV = (id) => absVal(parseFloat(document.getElementById(id).value) || 0);
+    const setL = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString(); };
+    const matT = document.getElementById('matType').value;
+    let grav = 2.8, mPrice = 10000, mRate = 1.0;
+    if (matT==='AL'){ grav=2.8; mPrice=10000; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
+
+    const qty = getV('qty');
+    if (qty <= 0) {
+        document.getElementById('finalUnitPrice').innerText = '0원';
+        return;
+    }
+
+    let machDiscount = (qty >= 50) ? 0.15 : (qty >= 30 ? 0.10 : (qty >= 10 ? 0.05 : 0));
+    const badge = document.getElementById('discountBadge');
+    const header = document.getElementById('headerDiscount');
+    if (machDiscount > 0) {
+        const pct = machDiscount * 100;
+        badge.textContent = `가공비 ${pct}% 할인 적용`;
+        badge.className = 'discount-tag';
+        header.textContent = `${pct}% 할인중`;
+        header.style.color = '#ffc107';
+    } else {
+        badge.textContent = '할인 없음 (10개↑ 5%, 30개↑ 10%, 50개↑ 15%)';
+        badge.className = 'discount-tag none';
+        header.textContent = '할인없음';
+        header.style.color = '#777';
+    }
+
+    let wKg = (getV('dimW') * getV('dimD') * getV('dimH') * grav / 1000000);
+    document.getElementById('outWeight').innerText = wKg.toFixed(2);
+    let uMat = wKg * mPrice;
+    setL('lineMat', uMat);
+    setL('outMat', roundTo100(uMat));
+
+    let sProgTotal = getV('prog') * 300;
+    let sToolTotal = getV('tool') * 300;
+    let tSetup = sProgTotal + sToolTotal;
+    let uSetup = qty <= 4 ? tSetup : (qty <= 9 ? (tSetup * 0.5 + tSetup * 0.5 / qty) : tSetup / qty);
+    let sProgUnit = qty <= 4 ? sProgTotal : (qty <= 9 ? (sProgTotal * 0.5 + sProgTotal * 0.5 / qty) : sProgTotal / qty);
+    let sToolUnit = qty <= 4 ? sToolTotal : (qty <= 9 ? (sToolTotal * 0.5 + sToolTotal * 0.5 / qty) : sToolTotal / qty);
+    setL('lineProg', sProgUnit);
+    setL('lineTool', sToolUnit);
+
+    const disc = (val) => val * (1 - machDiscount);
+    setL('linePS', disc(getV('pS')*2000*mRate)); setL('linePM', disc(getV('pM')*3000*mRate)); setL('linePL', disc(getV('pL')*4000*mRate));
+    setL('lineCS', disc(getV('cS')*3500*mRate)); setL('lineCM', disc(getV('cM')*4500*mRate)); setL('lineCL', disc(getV('cL')*6000*mRate));
+    setL('lineISO01', disc(getV('iso01')*3000*mRate));
+    setL('lineISO03', disc(getV('iso03')*5000*mRate));
+    setL('lineISO04', disc(getV('iso04')*7000*mRate));
+    setL('lineISO06', disc(getV('iso06')*9000*mRate));
+    setL('lineISO10', disc(getV('iso10')*11000*mRate));
+
+    const baseMach = (getV('pS')*2000 + getV('pM')*3000 + getV('pL')*4000 +
+                      getV('cS')*3500 + getV('cM')*4500 + getV('cL')*6000 +
+                      getV('iso01')*3000 + getV('iso03')*5000 + getV('iso04')*7000 +
+                      getV('iso06')*9000 + getV('iso10')*11000) * mRate;
+
+    let sT = 0;
+    const sQ = document.getElementsByClassName('spec-qty');
+    const sP = document.getElementsByClassName('spec-price');
+    for(let i=0; i<sQ.length; i++) sT += absVal(parseFloat(sQ[i].value)||0) * absVal(parseFloat(sP[i].value)||0);
+
+    let uSetupMach = uSetup + disc(baseMach + sT);
+    setL('outSetupMach', roundTo100(uSetupMach));
+
+    let uAddStep = getV('special') + getV('grind');
+    setL('outAddStep', uAddStep);
+    let uSurf = wKg * parseFloat(document.getElementById('surfaceType').value);
+    setL('lineSurface', uSurf); setL('outSurface', roundTo100(uSurf));
+    let uDeburr = parseFloat(document.getElementById('deburrLevel').value);
+    setL('lineDeburr', uDeburr); setL('outDeburr', uDeburr);
+
+    let final = roundTo100(uMat) + roundTo100(uSetupMach) + uAddStep + roundTo100(uSurf) + uDeburr;
+    document.getElementById('finalUnitPrice').innerText = roundTo100(final).toLocaleString() + '원';
+}
+
+function savePDF() {
+    const getV = (id) => absVal(parseFloat(document.getElementById(id).value) || 0);
+    const getText = (id) => document.getElementById(id) ? document.getElementById(id).innerText : '0';
+    const matT = document.getElementById('matType');
+    const surfT = document.getElementById('surfaceType');
+    const deburT = document.getElementById('deburrLevel');
+    const qty = getV('qty');
+    const now = new Date().toLocaleDateString('ko-KR');
+    const discountPct = (qty >= 50) ? 15 : (qty >= 30 ? 10 : (qty >= 10 ? 5 : 0));
+
+    document.getElementById('pdf-meta').innerHTML = `발행일: ${now} &nbsp;|&nbsp; 소재: ${matT.options[matT.selectedIndex].text} &nbsp;|&nbsp; 수량: ${qty}개`;
+
+    const rows = [
+        ['1. 소재비', `${getText('outWeight')}kg`, getText('outMat') + ' 원'],
+        ['2. 세팅+가공비', discountPct > 0 ? `가공비 ${discountPct}% 할인 적용` : '-', getText('outSetupMach') + ' 원'],
+        ['3. 연마 / 기타가공', '연마비 / 기타 가공비', getText('outAddStep') + ' 원'],
+        ['4. 표면처리', surfT.options[surfT.selectedIndex].text, getText('outSurface') + ' 원'],
+        ['5. 버제거', deburT.options[deburT.selectedIndex].text, getText('outDeburr') + ' 원'],
+    ];
+
+    document.getElementById('pdf-tbody').innerHTML = rows.map(([a,b,c]) =>
+        `<tr><td><b>${a}</b></td><td>${b}</td><td style="text-align:right; font-weight:700;">${c}</td></tr>`
+    ).join('');
+
+    document.getElementById('pdf-discount-note').innerText = discountPct > 0 ? `* 수량 ${qty}개 기준 가공비 ${discountPct}% 할인 적용` : '';
+    document.getElementById('pdf-total-line').innerHTML = `최종 납품 단가 (개당) &nbsp; ${getText('finalUnitPrice')}`;
+
+    document.getElementById('pdf-content').style.display = 'block';
+    html2pdf().set({
+        margin: 5, filename: '제이투엔텍_견적서.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(document.getElementById('pdf-content')).save().then(() => {
+        document.getElementById('pdf-content').style.display = 'none';
+    });
+}
+
+window.onload = updateSurfaceOptions;
+</script>
+</body>
+</html>
