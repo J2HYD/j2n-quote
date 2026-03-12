@@ -387,7 +387,7 @@ function calc() {
     const setL = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString(); };
     const matT = document.getElementById('matType').value;
     let grav = 2.8, mPrice = 10000, mRate = 1.0;
-    if (matT==='AL'){ grav=2.8; mPrice=10000; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
+    if (matT==='AL'){ grav=2.8; mPrice=10500; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
 
     const qty = getV('qty');
     if (qty <= 0) {
