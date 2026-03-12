@@ -94,50 +94,10 @@
 
         .btn-pdf { background: #d32f2f; color: #fff; border: none; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
 
-        /* 비밀번호 잠금 화면 */
-        #lockScreen { position: fixed; inset: 0; background: #121212; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
-        .lock-logo { font-size: 48px; }
-        .lock-title { font-size: 20px; font-weight: 900; color: #fff; margin: 0; }
-        .lock-sub { font-size: 13px; color: #777; margin: 0; }
-        .lock-dots { display: flex; gap: 14px; margin: 8px 0; }
-        .lock-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ffc107; background: transparent; transition: background 0.15s; }
-        .lock-dot.filled { background: #ffc107; }
-        .lock-error { color: #ff5555; font-size: 13px; font-weight: 700; height: 18px; text-align: center; }
-        .lock-keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
-        .lock-key { height: 72px; background: #1e1e1e; border: 1.5px solid #333; border-radius: 14px; color: #fff; font-size: 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; user-select: none; }
-        .lock-key:active { background: #ffc107; color: #000; }
-        .lock-key.del { font-size: 20px; color: #aaa; }
+        
     </style>
 </head>
 <body>
-
-<!-- 비밀번호 잠금 화면 -->
-<div id="lockScreen">
-    <div class="lock-logo">🔐</div>
-    <div class="lock-title">제이투엔텍 견적 시스템</div>
-    <div class="lock-sub">비밀번호 4자리를 입력하세요</div>
-    <div class="lock-dots">
-        <div class="lock-dot" id="d0"></div>
-        <div class="lock-dot" id="d1"></div>
-        <div class="lock-dot" id="d2"></div>
-        <div class="lock-dot" id="d3"></div>
-    </div>
-    <div class="lock-error" id="lockError"></div>
-    <div class="lock-keypad">
-        <div class="lock-key" onclick="lockInput('1')">1</div>
-        <div class="lock-key" onclick="lockInput('2')">2</div>
-        <div class="lock-key" onclick="lockInput('3')">3</div>
-        <div class="lock-key" onclick="lockInput('4')">4</div>
-        <div class="lock-key" onclick="lockInput('5')">5</div>
-        <div class="lock-key" onclick="lockInput('6')">6</div>
-        <div class="lock-key" onclick="lockInput('7')">7</div>
-        <div class="lock-key" onclick="lockInput('8')">8</div>
-        <div class="lock-key" onclick="lockInput('9')">9</div>
-        <div class="lock-key del" onclick="lockDel()">⌫</div>
-        <div class="lock-key" onclick="lockInput('0')">0</div>
-        <div class="lock-key" style="background:transparent; border-color:transparent;"></div>
-    </div>
-</div>
 
 
 <div class="app-header">
@@ -314,33 +274,6 @@
 </div>
 
 <script>
-
-// 비밀번호 잠금
-const PASS = '6159';
-let lockBuf = '';
-function lockInput(n) {
-    if (lockBuf.length >= 4) return;
-    lockBuf += n;
-    document.getElementById('d' + (lockBuf.length - 1)).classList.add('filled');
-    document.getElementById('lockError').textContent = '';
-    if (lockBuf.length === 4) {
-        setTimeout(() => {
-            if (lockBuf === PASS) {
-                document.getElementById('lockScreen').style.display = 'none';
-            } else {
-                document.getElementById('lockError').textContent = '비밀번호가 틀렸습니다';
-                lockBuf = '';
-                for (let i = 0; i < 4; i++) document.getElementById('d' + i).classList.remove('filled');
-            }
-        }, 200);
-    }
-}
-function lockDel() {
-    if (lockBuf.length === 0) return;
-    lockBuf = lockBuf.slice(0, -1);
-    document.getElementById('d' + lockBuf.length).classList.remove('filled');
-    document.getElementById('lockError').textContent = '';
-}
 
 // PWA 서비스워커 등록
 if ('serviceWorker' in navigator) {
