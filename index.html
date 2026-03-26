@@ -82,7 +82,7 @@
         .toggle-detail { width: 100%; background: none; border: none; color: #ffc107; font-size: 12px; font-weight: 700; padding: 4px; cursor: pointer; margin-bottom: 4px; }
 
         /* PDF 전용 */
-        #pdf-content { display: none; }
+        #pdf-content { position: fixed; left: -9999px; top: 0; width: 210mm; background: #fff; z-index: -1; }
         .pdf-wrap { padding: 20px; background: #fff; color: #000; font-size: 13px; font-family: 'Malgun Gothic', sans-serif; }
         .pdf-title { font-size: 22px; font-weight: 900; border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 16px; }
         .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
@@ -93,6 +93,7 @@
         .pdf-discount-note { font-size: 12px; color: #888; margin-top: 6px; text-align: right; }
 
         .btn-pdf { background: #d32f2f; color: #fff; border: none; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn-reset { background: #333; color: #fff; border: none; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 8px; }
 
         
     </style>
@@ -102,7 +103,10 @@
 
 <div class="app-header">
     <h1>🔧 제이투엔텍 블럭 견적</h1>
-    <span id="headerDiscount">할인없음</span>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span id="headerDiscount">할인없음</span>
+        <button onclick="resetAll()" style="background:#333; border:none; color:#ffc107; font-size:12px; font-weight:800; padding:5px 10px; border-radius:6px; cursor:pointer;">↺ 초기화</button>
+    </div>
 </div>
 
 <!-- 수량 -->
@@ -236,6 +240,7 @@
 
 <div style="margin: 10px 12px;">
     <button class="btn-pdf" onclick="savePDF()">📄 PDF 견적서 저장</button>
+<button class="btn-reset" onclick="resetAll()">↺ 전체 초기화</button>
 </div>
 
 <!-- 하단 고정 바 -->
@@ -262,7 +267,7 @@
 <!-- PDF 전용 -->
 <div id="pdf-content">
     <div class="pdf-wrap">
-        <div class="pdf-title">제이투엔텍 블럭 견적서</div>
+        <div class="pdf-title" id="pdf-title-name">제이투엔텍 블럭 견적서</div>
         <div style="font-size:13px; color:#555; margin-bottom:20px;" id="pdf-meta"></div>
         <table class="pdf-table">
             <thead><tr><th>항목</th><th>상세</th><th>금액 (원)</th></tr></thead>
@@ -280,6 +285,21 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
+}
+
+
+function resetAll() {
+    if (!confirm('모든 입력값을 초기화할까요?')) return;
+    const numIds = ['qty','dimW','dimD','dimH','prog','tool','pS','pM','pL','cS','cM','cL','iso01','iso03','iso04','iso06','iso10','grind','special'];
+    numIds.forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('qty').value = 1;
+    document.getElementById('matType').value = 'AL';
+    document.getElementById('deburrLevel').value = '1000';
+    // 특수 항목 삭제
+    document.getElementById('specCavContainer').innerHTML = '';
+    updateSurfaceOptions();
+    calc();
+    window.scrollTo(0, 0);
 }
 
 function changeQty(delta) {
@@ -328,7 +348,7 @@ function calc() {
         return;
     }
 
-    let machDiscount = (qty >= 50) ? 0.15 : (qty >= 30 ? 0.10 : (qty >= 10 ? 0.05 : 0));
+    let machDiscount = (qty >= 30) ? 0.20 : (qty >= 20 ? 0.15 : (qty >= 10 ? 0.10 : (qty >= 5 ? 0.05 : 0)));
     const badge = document.getElementById('discountBadge');
     const header = document.getElementById('headerDiscount');
     if (machDiscount > 0) {
@@ -393,6 +413,8 @@ function calc() {
 }
 
 function savePDF() {
+    const quoteName = prompt('견적서 품목명을 입력하세요', '');
+    if (quoteName === null) return; // 취소 시 중단
     const getV = (id) => absVal(parseFloat(document.getElementById(id).value) || 0);
     const getText = (id) => document.getElementById(id) ? document.getElementById(id).innerText : '0';
     const matT = document.getElementById('matType');
@@ -400,8 +422,11 @@ function savePDF() {
     const deburT = document.getElementById('deburrLevel');
     const qty = getV('qty');
     const now = new Date().toLocaleDateString('ko-KR');
-    const discountPct = (qty >= 50) ? 15 : (qty >= 30 ? 10 : (qty >= 10 ? 5 : 0));
+    const discountPct = (qty >= 30) ? 20 : (qty >= 20 ? 15 : (qty >= 10 ? 10 : (qty >= 5 ? 5 : 0)));
 
+    document.getElementById('pdf-title-name').innerText = quoteName ? quoteName : '제이투엔텍 블럭 견적서';
+    document.getElementById('pdf-title').innerHTML = '제이투엔텍 블럭 견적서' + (quoteName ? ' — ' + quoteName : '');
+    document.getElementById('pdf-title-name').innerText = quoteName ? `[${quoteName}]` : '';
     document.getElementById('pdf-meta').innerHTML = `발행일: ${now} &nbsp;|&nbsp; 소재: ${matT.options[matT.selectedIndex].text} &nbsp;|&nbsp; 수량: ${qty}개`;
 
     const rows = [
@@ -419,14 +444,17 @@ function savePDF() {
     document.getElementById('pdf-discount-note').innerText = discountPct > 0 ? `* 수량 ${qty}개 기준 가공비 ${discountPct}% 할인 적용` : '';
     document.getElementById('pdf-total-line').innerHTML = `최종 납품 단가 (개당) &nbsp; ${getText('finalUnitPrice')}`;
 
-    document.getElementById('pdf-content').style.display = 'block';
+    const pdfEl = document.getElementById('pdf-content');
+    pdfEl.style.left = '0';
+    pdfEl.style.zIndex = '9999';
     html2pdf().set({
-        margin: 5, filename: '제이투엔텍_견적서.pdf',
+        margin: 5, filename: `제이투엔텍_${quoteName || '견적서'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(document.getElementById('pdf-content')).save().then(() => {
-        document.getElementById('pdf-content').style.display = 'none';
+    }).from(pdfEl).save().then(() => {
+        pdfEl.style.left = '-9999px';
+        pdfEl.style.zIndex = '-1';
     });
 }
 
