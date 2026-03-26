@@ -233,14 +233,13 @@
     <div class="card-header">6. 버제거</div>
     <div class="row">
         <div class="row-label">난이도</div>
-        <div class="row-input"><select id="deburrLevel" onchange="calc()"><option value="1000">1단계</option><option value="3000">2단계</option><option value="6000">3단계</option><option value="10000">4단계</option><option value="15000">5단계</option></select></div>
+        <div class="row-input"><select id="deburrLevel" onchange="calc()"><option value="1000">1단계</option><option value="3000">2단계</option><option value="5000">3단계</option><option value="10000">4단계</option><option value="15000">5단계</option></select></div>
         <div class="row-price"><span id="lineDeburr">1,000</span>원</div>
     </div>
 </div>
 
 <div style="margin: 10px 12px;">
     <button class="btn-pdf" onclick="savePDF()">📄 PDF 견적서 저장</button>
-<button class="btn-reset" onclick="resetAll()">↺ 전체 초기화</button>
 </div>
 
 <!-- 하단 고정 바 -->
@@ -340,7 +339,7 @@ function calc() {
     const setL = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString(); };
     const matT = document.getElementById('matType').value;
     let grav = 2.8, mPrice = 10000, mRate = 1.0;
-    if (matT==='AL'){ grav=2.8; mPrice=10500; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
+    if (matT==='AL'){ grav=2.8; mPrice=10500; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.1; } else { grav=7.85; mPrice=2300; mRate=1.5; }
 
     const qty = getV('qty');
     if (qty <= 0) {
@@ -349,17 +348,12 @@ function calc() {
     }
 
     let machDiscount = (qty >= 30) ? 0.20 : (qty >= 20 ? 0.15 : (qty >= 10 ? 0.10 : (qty >= 5 ? 0.05 : 0)));
-    const badge = document.getElementById('discountBadge');
     const header = document.getElementById('headerDiscount');
     if (machDiscount > 0) {
         const pct = machDiscount * 100;
-        badge.textContent = `가공비 ${pct}% 할인 적용`;
-        badge.className = 'discount-tag';
         header.textContent = `${pct}% 할인중`;
         header.style.color = '#ffc107';
     } else {
-        badge.textContent = '할인 없음 (10개↑ 5%, 30개↑ 10%, 50개↑ 15%)';
-        badge.className = 'discount-tag none';
         header.textContent = '할인없음';
         header.style.color = '#777';
     }
@@ -379,17 +373,21 @@ function calc() {
     setL('lineProg', sProgUnit);
     setL('lineTool', sToolUnit);
 
-    const disc = (val) => val * (1 - machDiscount);
-    setL('linePS', disc(getV('pS')*2000*mRate)); setL('linePM', disc(getV('pM')*3000*mRate)); setL('linePL', disc(getV('pL')*4000*mRate));
-    setL('lineCS', disc(getV('cS')*3500*mRate)); setL('lineCM', disc(getV('cM')*4500*mRate)); setL('lineCL', disc(getV('cL')*6000*mRate));
+    // 심도 할증 (T, W, L 각각 150mm 초과 시 축당 ×1.1, 251mm 이상 ×1.2)
+    const depthRate = (v) => v <= 150 ? 1.0 : (v <= 250 ? 1.1 : 1.2);
+    const depthMult = depthRate(getV('dimW')) * depthRate(getV('dimD')) * depthRate(getV('dimH'));
+
+    const disc = (val) => val * (1 - machDiscount) * depthMult;
+    setL('linePS', disc(getV('pS')*1500*mRate)); setL('linePM', disc(getV('pM')*2200*mRate)); setL('linePL', disc(getV('pL')*3000*mRate));
+    setL('lineCS', disc(getV('cS')*2500*mRate)); setL('lineCM', disc(getV('cM')*3500*mRate)); setL('lineCL', disc(getV('cL')*4500*mRate));
     setL('lineISO01', disc(getV('iso01')*3000*mRate));
     setL('lineISO03', disc(getV('iso03')*5000*mRate));
     setL('lineISO04', disc(getV('iso04')*7000*mRate));
     setL('lineISO06', disc(getV('iso06')*9000*mRate));
     setL('lineISO10', disc(getV('iso10')*11000*mRate));
 
-    const baseMach = (getV('pS')*2000 + getV('pM')*3000 + getV('pL')*4000 +
-                      getV('cS')*3500 + getV('cM')*4500 + getV('cL')*6000 +
+    const baseMach = (getV('pS')*1500 + getV('pM')*2200 + getV('pL')*3000 +
+                      getV('cS')*2500 + getV('cM')*3500 + getV('cL')*4500 +
                       getV('iso01')*3000 + getV('iso03')*5000 + getV('iso04')*7000 +
                       getV('iso06')*9000 + getV('iso10')*11000) * mRate;
 
