@@ -82,7 +82,7 @@
         .toggle-detail { width: 100%; background: none; border: none; color: #ffc107; font-size: 12px; font-weight: 700; padding: 4px; cursor: pointer; margin-bottom: 4px; }
 
         /* PDF 전용 */
-        #pdf-content { position: fixed; left: -9999px; top: 0; width: 210mm; background: #fff; z-index: -1; }
+        #pdf-content { display: none; }
         .pdf-wrap { padding: 20px; background: #fff; color: #000; font-size: 13px; font-family: 'Malgun Gothic', sans-serif; }
         .pdf-title { font-size: 22px; font-weight: 900; border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 16px; }
         .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
@@ -444,18 +444,51 @@ function savePDF() {
     document.getElementById('pdf-discount-note').innerText = discountPct > 0 ? `* 수량 ${qty}개 기준 가공비 ${discountPct}% 할인 적용` : '';
     document.getElementById('pdf-total-line').innerHTML = `최종 납품 단가 (개당) &nbsp; ${getText('finalUnitPrice')}`;
 
+    // PDF 전용 팝업 윈도우에서 생성
     const pdfEl = document.getElementById('pdf-content');
-    pdfEl.style.left = '0';
-    pdfEl.style.zIndex = '9999';
-    html2pdf().set({
-        margin: 5, filename: `제이투엔텍_${quoteName || '견적서'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(pdfEl).save().then(() => {
-        pdfEl.style.left = '-9999px';
-        pdfEl.style.zIndex = '-1';
-    });
+    const htmlContent = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+<style>
+body{margin:0;padding:0;background:#fff;}
+.pdf-wrap{padding:20px;background:#fff;color:#000;font-size:13px;font-family:'Malgun Gothic',sans-serif;}
+.pdf-title{font-size:22px;font-weight:900;border-bottom:3px solid #ffc107;padding-bottom:8px;margin-bottom:16px;}
+.pdf-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
+.pdf-table th{background:#ffc107;color:#000;padding:8px 10px;font-weight:800;text-align:left;border:1px solid #ddd;}
+.pdf-table td{padding:7px 10px;border:1px solid #ddd;color:#222;}
+.pdf-table tr:nth-child(even) td{background:#f9f9f9;}
+.pdf-total{background:#ffc107;padding:16px 20px;border-radius:8px;text-align:right;font-size:20px;font-weight:900;color:#000;margin-top:12px;}
+.pdf-note{font-size:12px;color:#888;margin-top:6px;text-align:right;}
+</style></head>
+<body>${pdfEl.innerHTML}<\/body></html>`;
+    
+    const blob = new Blob([htmlContent], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'width=800,height=600');
+    if (win) {
+        win.onload = () => {
+            win.html2pdf().set({
+                margin: 5, filename: `제이투엔텍_${quoteName || '견적서'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(win.document.body).save().then(() => {
+                setTimeout(() => win.close(), 1000);
+                URL.revokeObjectURL(url);
+            });
+        };
+    } else {
+        // 팝업 차단된 경우 기존 방식으로 fallback
+        pdfEl.style.display = 'block';
+        html2pdf().set({
+            margin: 5, filename: `제이투엔텍_${quoteName || '견적서'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(pdfEl).save().then(() => {
+            pdfEl.style.display = 'none';
+        });
+    }
 }
 
 window.onload = updateSurfaceOptions;
