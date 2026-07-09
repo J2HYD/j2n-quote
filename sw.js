@@ -1,4 +1,4 @@
-const CACHE_NAME = 'j2n-quote-v12';
+const CACHE_NAME = 'j2n-quote-v13';
 const urlsToCache = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
