@@ -37,6 +37,14 @@
         .btn-add { background: #ffc107; color: #000000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 10px; font-weight: 800; }
         .btn-del { background: #444; color: #ff4444; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-pdf { background: #d32f2f; color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 800; margin-top: 15px; font-size: 16px; }
+
+        /* 모바일: 사이드바를 아래로 스택 (내부 스타일은 그대로) */
+        @media (max-width: 900px) {
+            body { padding: 12px; }
+            .main-wrapper { flex-direction: column; gap: 20px; max-width: 100%; }
+            .input-container { padding: 25px; }
+            .total-sidebar { position: static; top: auto; padding: 25px; }
+        }
     </style>
 </head>
 <body>
@@ -122,6 +130,20 @@
 </div>
 <script>
 function roundTo100(val) { return Math.round(val / 100) * 100; }
+
+// FCD 주물 소재 무게구간별 kg당 단가 (실적 데이터 기반, 구간별 최대값 적용)
+function getFcdPrice(kg) {
+    if (kg < 2)  return 6100;
+    if (kg < 5)  return 5200;
+    if (kg < 10) return 4850;
+    if (kg < 15) return 4400;
+    if (kg < 20) return 4300;
+    return 4200;
+}
+
+// AL6061 각재 자사 면삭 단가 (원/cm²)
+const AL_FACE_RATE = 15;
+
 function addSpecCav() {
     const container = document.getElementById('specCavContainer');
     const div = document.createElement('div');
@@ -141,7 +163,7 @@ function calc() {
     const setL = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = Math.round(val).toLocaleString(); };
     const matT = document.getElementById('matType').value;
     let grav = 2.8, mPrice = 10000, mRate = 1.0;
-    if (matT==='AL'){ grav=2.8; mPrice=10000; } else if (matT==='FCD'){ grav=7.3; mPrice=4500; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
+    if (matT==='AL'){ grav=2.7; mPrice=9500; } else if (matT==='FCD'){ grav=7.2; mPrice=0; mRate=1.2; } else { grav=7.85; mPrice=2300; mRate=1.5; }
     
     const qty = getV('qty'); if (qty <= 0) return;
 
@@ -151,9 +173,24 @@ function calc() {
     // 1. 소재비 계산
     let wKg = (getV('dimW') * getV('dimD') * getV('dimH') * grav / 1000000);
     document.getElementById('outWeight').innerText = wKg.toFixed(2);
+
+    // FCD는 무게구간별 kg당 단가 적용
+    if (matT === 'FCD') {
+        mPrice = getFcdPrice(wKg);
+    }
+
     let uMat = wKg * mPrice;
-    setL('lineMat', uMat);
-    setL('outMat', roundTo100(uMat));
+
+    // AL은 자사 면삭비 추가 (6면 기준)
+    let uFaceMill = 0;
+    if (matT === 'AL') {
+        const T = getV('dimW'), W = getV('dimD'), L = getV('dimH');
+        const faceArea_cm2 = 2 * (T*W + T*L + W*L) / 100;
+        uFaceMill = faceArea_cm2 * AL_FACE_RATE;
+    }
+
+    setL('lineMat', uMat + uFaceMill);
+    setL('outMat', roundTo100(uMat + uFaceMill));
 
     // 2. 세팅비 계산 (수량 연동)
     let sProgTotal = getV('prog') * 300;
@@ -196,7 +233,7 @@ function calc() {
     setL('lineDeburr', uDeburr); setL('outDeburr', uDeburr);
 
     // 최종 단가
-    let final = roundTo100(uMat) + roundTo100(uSetupMach) + uAddStep + roundTo100(uSurf) + uDeburr;
+    let final = roundTo100(uMat + uFaceMill) + roundTo100(uSetupMach) + uAddStep + roundTo100(uSurf) + uDeburr;
     document.getElementById('finalUnitPrice').innerText = roundTo100(final).toLocaleString() + "원";
 }
 
